@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Memory Usage Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .chart-container {
+            width: 50%;
+            margin: auto;
+        }
+
+        .current-value {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Live Memory Usage Dashboard</h1>
+
+    <!-- Display Current Memory Value -->
+    <div class="current-value">
+        <p>Current Memory Usage: <span id="memoryValue">Loading...</span>%</p>
+    </div>
+
+    <!-- Memory Usage Chart -->
+    <div class="chart-container">
+        <canvas id="memoryChart"></canvas>
+    </div>
+
+    <script>
+        const memoryChartCtx = document.getElementById("memoryChart").getContext("2d");
+
+        // Create Memory usage chart
+        const memoryChart = new Chart(memoryChartCtx, {
+            type: 'line',
+            data: {
+                labels: Array(10).fill(''), // Initial placeholder labels
+                datasets: [{
+                    label: 'Memory Usage (%)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    data: Array(10).fill(50), // Start with a baseline value
+                    fill: false,
+                }]
+            },
+            options: {
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Time (seconds)' } },
+                    y: { display: true, title: { display: true, text: 'Memory Usage (%)' }, min: 0, max: 100 }
+                }
+            }
+        });
+
+        // Display current memory value in HTML
+        const memoryValueDisplay = document.getElementById("memoryValue");
+
+        let time = 0;
+
+        async function fetchMemoryUsage() {
+            try {
+                const response = await fetch("http://localhost:3000/stats");
+                const data = await response.json();
+
+                // Update the text value for Memory Usage
+                memoryValueDisplay.innerText = data.memoryUsage;
+
+                // Update Memory chart
+                memoryChart.data.labels.push(time);
+                memoryChart.data.datasets[0].data.push(parseFloat(data.memoryUsage));
+                if (memoryChart.data.labels.length > 10) {
+                    memoryChart.data.labels.shift(); // Remove the oldest label
+                    memoryChart.data.datasets[0].data.shift(); // Remove the oldest data point
+                }
+                memoryChart.update();
+
+                time += 3; // Increase time in seconds (since we update every 3 seconds)
+            } catch (error) {
+                console.error("Error fetching memory usage:", error);
+            }
+        }
+
+        // Fetch memory usage every 3 seconds
+        setInterval(fetchMemoryUsage, 3000);
+
+        // Initial fetch
+        fetchMemoryUsage();
+    </script>
+</body>
+
+</html>
